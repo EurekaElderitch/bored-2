@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+    <title>Arcade Dashboard</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link href="manifest.json" rel="manifest" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+        }
+    </script>
+</head>
+
+<body class="dark flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header
+        class="w-full max-w-[1600px] mx-auto px-4 md:px-12 py-4 md:py-5 flex justify-between items-center md:items-start select-none relative z-50">
+
+        <!-- Left: Status -->
+        <div class="flex flex-col gap-1">
+            <div id="status-capsule"
+                class="flex items-center gap-0.5 md:gap-1 p-1 px-2 md:p-1.5 md:px-3 rounded-full glass-card border border-gray-200/50 dark:border-gray-800/50 shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                <span id="status-dot"
+                    class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
+                <span id="system-status"
+                    class="text-[9px] font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 ml-1">LOCAL</span>
+            </div>
+        </div>
+
+        <!-- Right: Controls -->
+        <div class="flex items-center gap-3 md:gap-6">
+            <button id="theme-toggle"
+                class="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors">
+                <span class="material-symbols-outlined text-[18px] md:text-[20px]">dark_mode</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mecha Cinematic Backgrounds -->
+    <div id="mecha-bg"
+        class="fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-1000 z-30 overflow-hidden">
+        <img src="assets/titanfall_cockpit_idle_1767881576765.png" alt="Titanfall Cockpit"
+            class="absolute inset-0 w-full h-full object-cover scale-110">
+        <div class="absolute inset-0 bg-black/40"></div>
+        <div class="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]"></div>
+    </div>
+
+    <!-- Mecha HUD Overlay (Visible in Overdrive Mode) -->
+    <div id="mecha-hud"
+        class="fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-700 z-40 overflow-hidden">
+
+        <!-- Background Grid -->
+        <div
+            class="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(255,0,0,0.03)_100%)] opacity-20">
+        </div>
+        <div
+            class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+        </div>
+
+        <!-- Central Targeting Reticle -->
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px]">
+            <!-- Outer Ring -->
+            <div
+                class="absolute inset-0 border-2 border-red-500/20 rounded-full border-dashed animate-[spin_20s_linear_infinite]">
+            </div>
+            <!-- Inner Brackets -->
+            <div class="absolute inset-[20%] border-t-2 border-l-2 border-red-500/40 w-12 h-12"></div>
+            <div class="absolute inset-[20%] right-0 border-t-2 border-r-2 border-red-500/40 w-12 h-12 ml-auto"></div>
+            <div class="absolute bottom-[20%] left-[20%] border-b-2 border-l-2 border-red-500/40 w-12 h-12"></div>
+            <div class="absolute bottom-[20%] right-[20%] border-b-2 border-r-2 border-red-500/40 w-12 h-12"></div>
+
+            <!-- Scanning Line -->
+            <div class="absolute top-1/2 left-0 w-full h-[1px] bg-red-500/30 animate-[pulse_2s_infinite]"></div>
+            <div class="absolute top-0 left-1/2 w-[1px] h-full bg-red-500/30 animate-[pulse_2s_infinite]"></div>
+
+            <!-- Center Dot -->
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_10px_#ff0000]">
+            </div>
+        </div>
+
+        <!-- Left HUD: Reactor/Heat -->
+        <div
+            class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 md:gap-8 scale-75 md:scale-100 origin-left">
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-end">
+                    <span class="text-[8px] font-bold tracking-[0.3em] text-orange-500/60 uppercase">Reactor
+                        Output</span>
+                    <span class="text-[10px] font-mono text-orange-500/80">75%</span>
+                </div>
+                <div
+                    class="w-1.5 h-32 bg-gray-800/30 rounded-full relative overflow-hidden border border-orange-500/10">
+                    <div id="bar-reactor"
+                        class="absolute bottom-0 w-full bg-gradient-to-t from-orange-600 to-orange-400 shadow-[0_0_15px_#ff6600] transition-all duration-1000"
+                        style="height: 75%"></div>
+                </div>
+            </div>
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between items-end">
+                    <span class="text-[8px] font-bold tracking-[0.3em] text-orange-500/60 uppercase">Core Heat</span>
+                    <span class="text-[10px] font-mono text-orange-500/80">40%</span>
+                </div>
+                <div class="w-1.5 h-32 bg-gray-800/30 rounded-full relative overflow-hidden border border-red-500/10">
+                    <div id="bar-heat"
+                        class="absolute bottom-0 w-full bg-gradient-to-t from-orange-600 to-orange-400 shadow-[0_0_15px_#ff6600] transition-all duration-300"
+                        style="height: 40%"></div>
+                </div>
+            </div>
+            <!-- Hex Decor -->
+            <div class="mt-4 flex gap-1">
+                <div class="w-2 h-2 bg-red-500/20 rotate-45"></div>
+                <div class="w-2 h-2 bg-red-500/40 rotate-45"></div>
+                <div class="w-2 h-2 bg-red-500/20 rotate-45"></div>
+            </div>
+        </div>
+
+        <!-- Right HUD: Sync Rate/Shield -->
+        <div
+            class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 flex flex-col items-end gap-6 md:gap-8 scale-75 md:scale-100 origin-right">
+            <div class="flex flex-col items-end gap-2 text-right">
+                <span class="text-[8px] font-bold tracking-[0.3em] text-orange-500/60 uppercase">Sync Rate</span>
+                <div
+                    class="w-32 md:w-48 h-1.5 bg-gray-800/30 rounded-full relative overflow-hidden border border-orange-500/10">
+                    <div id="bar-sync"
+                        class="absolute left-0 h-full bg-gradient-to-r from-orange-400 to-orange-600 shadow-[0_0_15px_#ff6600] transition-all duration-1000"
+                        style="width: 98%"></div>
+                </div>
+                <span class="text-[10px] font-mono text-orange-400 animate-pulse">98.2% / ACTIVE</span>
+            </div>
+            <div class="flex flex-col items-end gap-2 text-right">
+                <span class="text-[8px] font-bold tracking-[0.3em] text-red-500/60 uppercase">Neural Link</span>
+                <div
+                    class="w-32 md:w-48 h-1.5 bg-gray-800/30 rounded-full relative overflow-hidden border border-red-500/10">
+                    <div id="bar-link"
+                        class="absolute left-0 h-full bg-gradient-to-r from-cyan-400 to-cyan-600 shadow-[0_0_15px_#00ffff] transition-all duration-500"
+                        style="width: 85%"></div>
+                </div>
+                <span class="text-[10px] font-mono text-cyan-400">ESTABLISHED</span>
+            </div>
+            <!-- Data Stream Decor -->
+            <div class="mt-4 flex flex-col items-end gap-1 opacity-40">
+                <div class="w-12 h-0.5 bg-red-500/30"></div>
+                <div class="w-20 h-0.5 bg-red-500/50"></div>
+                <div class="w-16 h-0.5 bg-red-500/30"></div>
+            </div>
+        </div>
+
+        <!-- Top/Bottom Labels -->
+        <div class="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-4 opacity-40">
+            <span class="text-[7px] font-mono text-red-500">MK-01 PROTOCOL</span>
+            <div class="w-24 h-[1px] bg-red-500/30"></div>
+            <span class="text-[7px] font-mono text-red-500">00:04:26:01</span>
+        </div>
+
+        <!-- Corner Brackets (Redesigned) -->
+        <div
+            class="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-red-600/40 rounded-tl-xl shadow-[-5px_-5px_15px_rgba(255,0,0,0.1)]">
+        </div>
+        <div
+            class="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-red-600/40 rounded-tr-xl shadow-[5px_-5px_15px_rgba(255,0,0,0.1)]">
+        </div>
+        <div
+            class="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-red-600/40 rounded-bl-xl shadow-[-5px_5px_15px_rgba(255,0,0,0.1)]">
+        </div>
+        <div
+            class="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-red-600/40 rounded-br-xl shadow-[5px_5px_15px_rgba(255,0,0,0.1)]">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col items-center justify-center w-full max-w-[1000px] mx-auto px-6 pb-12">
+
+        <!-- Clock -->
+        <div class="text-center mb-4 md:mb-6">
+            <h1 id="clock"
+                class="text-[3.5rem] md:text-[5rem] font-light leading-none tracking-tight text-gray-800 dark:text-white font-[200]">
+                09<span class="animate-pulse text-gray-300 mx-1">:</span>41
+            </h1>
+            <div class="flex items-center justify-center gap-6 mt-2">
+                <div class="h-[1px] w-12 bg-gray-200 dark:bg-gray-800"></div>
+                <p id="date" class="text-xs font-bold tracking-[0.3em] text-gray-500 dark:text-gray-400 uppercase">
+                    TUESDAY / OCT 24
+                </p>
+                <div class="h-[1px] w-12 bg-gray-200 dark:bg-gray-800"></div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="w-full max-w-lg mb-8 md:mb-10 relative group px-4 md:px-0">
+            <form action="https://www.google.com/search" method="GET" id="search-form">
+                <input type="text" name="q" id="search-input" placeholder="Search..." autocomplete="off"
+                    class="search-input w-full h-11 md:h-12 pl-8 pr-12 rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] text-gray-800 dark:text-gray-200 text-xs focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 transition-all placeholder-gray-400">
+                <span
+                    class="material-symbols-outlined absolute right-8 md:right-5 top-1/2 -translate-y-1/2 text-[18px] text-gray-400 pointer-events-none">mic</span>
+            </form>
+        </div>
+
+        <!-- Links Grid -->
+        <div id="grid-container" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- JS Injected -->
+        </div>
+
+    </main>
+
+    <!-- Fixed Edit FAB -->
+    <button id="edit-fab"
+        class="fixed bottom-6 right-6 size-10 flex items-center justify-center rounded-full glass-fab text-white shadow-lg shadow-black/10 hover:scale-110 transition-transform active:scale-95 group z-50">
+        <span class="material-symbols-outlined text-[20px] group-[.is-editing]:hidden">edit</span>
+        <span class="material-symbols-outlined text-[20px] hidden group-[.is-editing]:block">check</span>
+    </button>
+
+
+    <!-- Game Overlay -->
+    <div id="game-overlay" class="fixed inset-0 z-[9999] hidden bg-black flex flex-col items-center justify-center">
+        <div id="grid-leak-container" class="absolute inset-0 pointer-events-none"></div>
+        <div id="terminal-overlay"
+            class="z-10 text-green-500 font-mono text-lg text-center opacity-0 transition-opacity duration-500">
+            <p id="terminal-text"></p>
+        </div>
+        <canvas id="game-canvas" class="z-20 hidden"></canvas>
+        <div id="game-ui"
+            class="absolute top-8 w-full px-12 flex justify-between text-white font-mono text-sm hidden z-30">
+            <div>LEVEL: <span id="game-level">1</span></div>
+            <div>BITS: <span id="game-score">0</span> / <span id="game-total">0</span></div>
+            <div>ESC TO ABORT</div>
+        </div>
+    </div>
+
+    <!-- System Defense Protocol (Hidden Game) -->
+    <div id="defense-protocol"
+        class="fixed inset-0 z-50 bg-[#050505] hidden flex flex-col items-center justify-center font-mono">
+        <!-- Notifikasi Wave 10 -->
+        <div id="waveNotify"
+            class="hidden absolute top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-cyan-950/90 border-4 double border-cyan-400 p-8 text-center z-[200] shadow-[0_0_30px_rgba(0,255,255,0.3)] pointer-events-none transition-opacity duration-500">
+            <h2 class="text-cyan-400 mb-4 text-lg tracking-widest">THREAT MITIGATED</h2>
+            <p class="text-[10px] leading-relaxed mb-6 text-cyan-100">INTRUSION WAVE 10 HALTED.<br>CHOOSE NEXT PROTOCOL:
+            </p>
+            <div class="flex justify-center gap-4 pointer-events-auto">
+                <button onclick="SysDef.continuePlaying()"
+                    class="m-2 p-3 text-[10px] cursor-pointer border-2 border-cyan-500 text-cyan-500 bg-cyan-950/50 hover:bg-cyan-900">MAINTAIN
+                    FIREWALL</button>
+                <button onclick="SysDef.finishGame()"
+                    class="m-2 p-3 text-[10px] cursor-pointer border-2 border-yellow-500 text-yellow-500 bg-yellow-950/50 hover:bg-yellow-900">SYSTEM
+                    REBOOT</button>
+            </div>
+        </div>
+
+        <div
+            class="hud absolute top-5 left-5 right-5 flex justify-between pointer-events-none z-10 text-[10px] font-bold">
+            <div class="bg-black/80 p-2 border-l-2 border-red-500 text-red-500 shadow-[0_0_10px_rgba(255,0,0,0.2)]">DATA
+                INTEGRITY: <span id="healthEl" class="text-white">100%</span></div>
+            <div class="bg-black/80 p-2 border-l-2 border-cyan-500 text-cyan-500 shadow-[0_0_10px_rgba(0,255,255,0.2)]">
+                INTRUSION WAVE: <span id="waveEl" class="text-white">1</span></div>
+            <div
+                class="bg-black/80 p-2 border-l-2 border-yellow-500 text-yellow-400 shadow-[0_0_10px_rgba(255,255,0,0.2)]">
+                ENCRYPTION KEYS: <span id="moneyEl" class="text-white">800</span></div>
+        </div>
+
+        <div id="startScreen"
+            class="ui-overlay absolute inset-0 bg-black/90 flex flex-col justify-center items-center z-[100] text-center">
+            <h1 class="text-3xl mb-10 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.8)] tracking-widest">SYSTEM
+                DEFENSE PROTOCOL</h1>
+            <div id="metaInfo" class="text-[10px] mb-6 text-gray-400 leading-relaxed font-mono"></div>
+            <div class="mb-6 flex flex-col gap-2">
+                <button onclick="SysDef.upgradeMeta('startMoney')"
+                    class="text-[8px] bg-yellow-900/30 p-2 border border-yellow-600 text-yellow-500 hover:bg-yellow-900/50 transition-colors">UPGRADE
+                    INIT KEYS: 100 PACKETS</button>
+                <button onclick="SysDef.upgradeMeta('coreHealth')"
+                    class="text-[8px] bg-red-900/30 p-2 border border-red-600 text-red-500 hover:bg-red-900/50 transition-colors">UPGRADE
+                    DATA INTEGRITY: 150 PACKETS</button>
+            </div>
+            <button onclick="SysDef.startGame()"
+                class="bg-cyan-950/80 border-2 border-cyan-400 text-cyan-400 py-4 px-10 mb-4 hover:bg-cyan-900 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] transition-all">INITIALIZE
+                DEFENSE</button>
+            <button onclick="SysDef.exitGame()" class="text-[10px] text-gray-500 hover:text-white mt-4">ABORT
+                PROTOCOL</button>
+        </div>
+
+        <div id="endScreen"
+            class="ui-overlay hidden absolute inset-0 bg-black/95 flex flex-col justify-center items-center z-[100] text-center">
+            <h2 id="endStatus" class="text-3xl mb-6 text-red-500 tracking-widest">SYSTEM CRITICAL</h2>
+            <div id="finalScore" class="text-[12px] mb-10 text-cyan-400 font-mono"></div>
+            <button onclick="SysDef.resetGameUI()"
+                class="bg-cyan-900 border-2 border-cyan-400 text-cyan-400 py-4 px-10 hover:bg-cyan-800">REBOOT
+                SYSTEM</button>
+            <button onclick="SysDef.exitGame()" class="mt-6 text-xs text-gray-500 hover:text-white">RETURN TO
+                DASHBOARD</button>
+        </div>
+
+        <canvas id="gameCanvas"
+            class="block bg-[#050510] border border-cyan-900/30 shadow-[0_0_50px_rgba(0,0,0,0.5)]"></canvas>
+
+        <div id="controlPanel"
+            class="ui-panel hidden absolute bottom-0 left-0 w-full bg-[#050510]/95 border-t border-cyan-500/50 p-4 flex flex-col items-center z-10 backdrop-blur-md">
+            <div class="flex gap-4 w-full justify-center mb-3 items-end">
+                <div class="flex gap-2">
+                    <div class="tower-btn cursor-pointer bg-black/50 border border-gray-700 p-2 w-24 text-center hover:border-cyan-500 transition-colors group"
+                        id="btn-laser" onclick="SysDef.selectTower('laser')">
+                        <div class="text-[8px] text-cyan-300 group-hover:text-cyan-100">PACKET FILTER</div>
+                        <div class="text-[8px] text-yellow-500 mt-1">80 KEYS</div>
+                    </div>
+                    <div class="tower-btn cursor-pointer bg-black/50 border border-gray-700 p-2 w-24 text-center hover:border-green-500 transition-colors group"
+                        id="btn-slow" onclick="SysDef.selectTower('slow')">
+                        <div class="text-[8px] text-green-300 group-hover:text-green-100">LATENCY SPIKE</div>
+                        <div class="text-[8px] text-yellow-500 mt-1">120 KEYS</div>
+                    </div>
+                    <div class="tower-btn cursor-pointer bg-black/50 border border-gray-700 p-2 w-24 text-center hover:border-fuchsia-500 transition-colors group"
+                        id="btn-multi" onclick="SysDef.selectTower('multi')">
+                        <div class="text-[8px] text-fuchsia-300 group-hover:text-fuchsia-100">DDOS PULSE</div>
+                        <div class="text-[8px] text-yellow-500 mt-1">200 KEYS</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1 items-center ml-4 pl-4 border-l border-gray-800">
+                    <span class="text-[6px] text-red-500 mb-1 tracking-widest">ROOT ACCESS</span>
+                    <button id="skillNuke" onclick="SysDef.useNuke()"
+                        class="bg-red-950/30 border border-red-600 text-red-500 px-3 py-2 text-[8px] hover:bg-red-900/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all">SYSTEM
+                        PURGE (500)</button>
+                </div>
+            </div>
+
+            <div id="upgradeBox"
+                class="hidden flex flex-col gap-2 w-full max-w-lg bg-black/80 p-2 border border-cyan-900/50 rounded">
+                <div class="flex justify-between items-center mb-1 px-1">
+                    <span class="text-[10px] text-cyan-400 font-bold" id="towerInfo">NODE LV.1</span>
+                    <select id="targetMode" onchange="SysDef.changeTargetMode()"
+                        class="bg-black text-[8px] border border-cyan-900 text-cyan-400 px-2 py-1 outline-none">
+                        <option value="first">PRIORITY: FIRST</option>
+                        <option value="strongest">PRIORITY: STRONG</option>
+                        <option value="closest">PRIORITY: CLOSE</option>
+                    </select>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="SysDef.applyUpgrade('speed')" id="upSpeed"
+                        class="flex-1 bg-cyan-950/30 border border-cyan-700 text-cyan-400 text-[8px] p-1 hover:bg-cyan-900 transition-colors">THROUGHPUT</button>
+                    <button onclick="SysDef.applyUpgrade('power')" id="upPower"
+                        class="flex-1 bg-cyan-950/30 border border-cyan-700 text-cyan-400 text-[8px] p-1 hover:bg-cyan-900 transition-colors">INTEGRITY</button>
+                    <button onclick="SysDef.applyUpgrade('range')" id="upRange"
+                        class="flex-1 bg-cyan-950/30 border border-cyan-700 text-cyan-400 text-[8px] p-1 hover:bg-cyan-900 transition-colors">COVERAGE</button>
+                    <button onclick="SysDef.prestigeTower()" id="prestigeBtn"
+                        class="flex-1 bg-purple-950/30 border border-purple-600 text-purple-400 text-[8px] p-1 hover:bg-purple-900 animate-pulse hidden">OVERCLOCK</button>
+                    <button onclick="SysDef.sellSelected()"
+                        class="px-3 bg-red-950/30 border border-red-800 text-red-500 text-[8px] hover:bg-red-900">DECOMMISSION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+
+</html>
