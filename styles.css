@@ -1,5 +1,6 @@
 /* ============================================================
-   ARCADE DASHBOARD — Optimized Stylesheet (Hybrid: works with Tailwind CDN)
+   ARCADE DASHBOARD — Optimized Stylesheet
+   Compatible with Tailwind CDN
    ============================================================ */
 
 *, *::before, *::after {
@@ -130,11 +131,6 @@ body.dark .custom-scroll::-webkit-scrollbar-thumb { background: #334155; }
 /* ---------- Edit FAB ---------- */
 #edit-fab { transition: transform .15s ease; }
 
-#edit-fab .icon-check { display: none; }
-
-body.is-editing #edit-fab .icon-edit { display: none; }
-body.is-editing #edit-fab .icon-check { display: inline-block; }
-
 body.lite-mode #edit-fab { transition: none; }
 body.lite-mode #edit-fab:hover,
 body.lite-mode #edit-fab:active { transform: none; }
@@ -146,7 +142,6 @@ body.lite-mode #edit-fab:active { transform: none; }
 body.mecha-mode #mecha-bg,
 body.mecha-mode #mecha-hud { opacity: 1; }
 
-/* Carbon-fibre pattern via CSS gradient (0 external request) */
 .mecha-carbon {
     background-image:
         repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 4px),
@@ -200,18 +195,18 @@ body.lite-mode .ui-overlay { transition: none; }
 .hud > div { letter-spacing: 0.05em; }
 body.lite-mode .hud > div { box-shadow: none !important; }
 
-/* upgradeBox: kontrol display eksplisit */
+/* upgradeBox display handling */
 #upgradeBox.hidden { display: none !important; }
 #upgradeBox:not(.hidden) { display: flex; }
 
-/* ---------- Global pause (tab hidden) ---------- */
+/* ---------- Global pause ---------- */
 body.paused *,
 body.paused *::before,
 body.paused *::after {
     animation-play-state: paused !important;
 }
 
-/* ---------- LITE MODE: kill heavy effects ---------- */
+/* ---------- LITE MODE ---------- */
 body.lite-mode .card,
 body.lite-mode .glass-card,
 body.lite-mode .glass-fab {
@@ -230,7 +225,6 @@ body.lite-mode canvas {
     image-rendering: crisp-edges;
 }
 
-/* Lite-mode: matikan banyak transition Tailwind sekaligus */
 body.lite-mode [class*="transition"],
 body.lite-mode [class*="animate-"] {
     transition-duration: 0ms !important;
