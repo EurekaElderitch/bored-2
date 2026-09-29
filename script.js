@@ -184,9 +184,20 @@ function save() {
 function bindEditBtn() {
     const editBtn = getEditBtn();
     if (!editBtn) return;
+
+    const iconEdit = document.getElementById('fab-icon-edit');
+    const iconCheck = document.getElementById('fab-icon-check');
+
     editBtn.addEventListener('click', () => {
         isEditing = !isEditing;
         document.body.classList.toggle('is-editing', isEditing);
+
+        // Toggle icon secara eksplisit
+        if (iconEdit && iconCheck) {
+            iconEdit.classList.toggle('hidden', isEditing);
+            iconCheck.classList.toggle('hidden', !isEditing);
+        }
+
         render();
     });
 }
