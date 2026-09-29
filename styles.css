@@ -1,438 +1,292 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1');
+/* ============================================================
+   ARCADE DASHBOARD — Optimized Stylesheet
+   Low-spec aware, no external assets, animation-pausable
+   ============================================================ */
 
-:root {
-    --bg-light: #E6E6E6;
-    --bg-dark: #0a0a0b;
-    --dot-light: #d1d1d1;
-    --dot-dark: #262626;
-    --text-main: #1f2937;
-    --text-muted: #6b7280;
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-light);
-    color: var(--text-main);
-    background-image: radial-gradient(var(--dot-light) 1.5px, transparent 1.5px);
-    background-size: 24px 24px;
-    min-height: 100vh;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
     overflow-x: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeSpeed;
+    transition: background-color .3s ease, color .3s ease;
 }
 
 body.dark {
-    background-color: var(--bg-dark);
-    color: #f3f4f6;
-    background-image: radial-gradient(var(--dot-dark) 1.5px, transparent 1.5px);
+    background: #050505;
+    color: #e5e7eb;
 }
 
-html {
-    scrollbar-width: none;
+body.defense-mode {
+    overflow: hidden;
 }
 
-body::-webkit-scrollbar {
-    display: none;
+/* Material Symbols default rendering tweak */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    user-select: none;
 }
 
-@-moz-document url-prefix() {
-    body {
-        -moz-osx-font-smoothing: grayscale;
-        text-rendering: optimizeLegibility;
-    }
-
-    input {
-        color-scheme: light dark;
-    }
-
-    input:focus,
-    button:focus {
-        outline: none;
-    }
-
-    .material-symbols-outlined {
-        vertical-align: bottom;
-    }
-}
-
-.tracking-widest-anime {
-    letter-spacing: 0.25em;
-}
-
+/* ---------- Glassmorphism (blur di-disable di lite-mode) ---------- */
 .glass-card {
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(10px);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 body.dark .glass-card {
-    background: rgba(17, 17, 17, 0.4);
+    background: rgba(17, 17, 17, 0.6);
 }
 
-.card {
-    background: white;
-    border: 1px solid #f3f4f6;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+body.lite-mode .glass-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #ffffff !important;
 }
 
-body.dark .card {
-    background: #111;
-    border-color: #333;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    border-color: #e5e7eb;
-}
-
-body.dark .card:hover {
-    border-color: #555;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-}
-
-.search-input {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-}
-
-.search-input:focus {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-body.is-editing .card {
-    border-style: dashed;
-    border-color: #ef4444;
-    animation: jiggle 0.3s ease-in-out infinite;
-}
-
-@keyframes jiggle {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    25% {
-        transform: rotate(0.4deg);
-    }
-
-    75% {
-        transform: rotate(-0.4deg);
-    }
-
-    100% {
-        transform: rotate(0deg);
-    }
-}
-
-.custom-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.custom-scroll::-webkit-scrollbar {
-    display: none;
+body.lite-mode.dark .glass-card {
+    background: #111 !important;
 }
 
 .glass-fab {
-    background: rgba(0, 0, 0, 0.4) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 9999;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-body:not(.dark) .glass-fab {
-    background: rgba(255, 255, 255, 0.5) !important;
-    color: #1f2937 !important;
+body.dark .glass-fab {
+    background: linear-gradient(135deg, #111, #000);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- Link cards ---------- */
+.card {
+    background: rgba(255, 255, 255, 0.6);
     border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
+    will-change: transform;
 }
 
-.date-separator {
-    height: 1px;
-    width: 20px;
-    background-color: #e5e7eb;
+body.dark .card {
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
-body.dark .date-separator {
-    background-color: #333;
+.card:hover {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.1);
+    transform: translateX(2px);
 }
 
-body.mecha-mode {
-    --bg-dark: #0a0000;
-    --dot-dark: #330000;
+body.dark .card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
-body.mecha-mode .glass-card,
-body.mecha-mode .card,
-body.mecha-mode .search-input {
-    border-color: #ff000033 !important;
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
+body.lite-mode .card,
+body.lite-mode .card:hover {
+    transition: none;
+    transform: none;
 }
 
-body.mecha-mode #system-status {
-    color: #ff4444 !important;
+/* ---------- Search ---------- */
+.search-input {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-body.mecha-mode #status-dot {
-    background-color: #ff0000 !important;
-    box-shadow: 0 0 10px #ff0000;
+.search-input:focus {
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03);
 }
 
-body.mecha-mode #mecha-hud,
+body.dark .search-input:focus {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.04);
+}
+
+/* ---------- Custom scrollbar ---------- */
+.custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.custom-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+body.dark .custom-scroll {
+    scrollbar-color: #334155 transparent;
+}
+
+body.dark .custom-scroll::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+/* ---------- Edit FAB icon toggle (pengganti group-[.is-editing]) ---------- */
+#edit-fab .icon-check {
+    display: none;
+}
+
+body.is-editing #edit-fab .icon-edit {
+    display: none;
+}
+
+body.is-editing #edit-fab .icon-check {
+    display: inline-block;
+}
+
+/* ---------- Mecha mode ---------- */
+#mecha-bg,
+#mecha-hud {
+    transition: opacity .8s ease;
+}
+
 body.mecha-mode #mecha-bg {
     opacity: 1;
 }
 
-body.mecha-mode #mecha-bg img {
-    animation: zoom-pulse 20s infinite alternate ease-in-out;
-}
-
-@keyframes zoom-pulse {
-    from {
-        transform: scale(1.1);
-    }
-
-    to {
-        transform: scale(1.2);
-    }
-}
-
 body.mecha-mode #mecha-hud {
-    text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+    opacity: 1;
 }
 
-@keyframes bar-pulse {
-
-    0%,
-    100% {
-        opacity: 0.6;
-    }
-
-    50% {
-        opacity: 1;
-    }
+/* Carbon-fibre pattern via CSS gradient (0 external request) */
+.mecha-carbon {
+    background-image:
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 4px);
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+body.lite-mode #mecha-hud {
+    display: none !important;
 }
 
-body.mecha-mode #mecha-hud [id^="bar-"] {
-    animation: bar-pulse 2s infinite ease-in-out;
-}
-
-@keyframes screen-flicker {
-    0% {
-        opacity: 0.97;
-        transform: skew(0.5deg);
-    }
-
-    5% {
-        opacity: 0.95;
-        transform: skew(-0.5deg);
-    }
-
-    10% {
-        opacity: 0.9;
-    }
-
-    15% {
-        opacity: 1;
-        transform: skew(0deg);
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
-.glitch-active {
-    animation: screen-flicker 0.1s infinite;
-    filter: hue-rotate(90deg) contrast(1.5);
-}
-
-@keyframes terminal-reveal {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-#terminal-text {
-    text-shadow: 0 0 5px #ff0000;
-    line-height: 1.6;
-}
-
+/* ---------- Grid Leak (System Breach) ---------- */
 .grid-box {
     position: absolute;
-    background: black;
-    transform: scale(0);
-    transition: transform 0.4s ease-in-out;
+    background: transparent;
+    transition: background-color .3s ease, box-shadow .3s ease;
+    contain: strict;
 }
 
 .grid-box.active {
-    transform: scale(1.01);
-}
-
-body.mecha-mode::before {
-    content: " ";
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    z-index: 999;
-    background-size: 100% 2px, 3px 100%;
-    pointer-events: none;
-    opacity: 0.3;
-}
-
-@keyframes flicker {
-    0% {
-        opacity: 0.8;
-    }
-
-    50% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0.9;
-    }
-}
-
-#terminal-overlay p {
-    animation: flicker 0.1s infinite;
-    text-shadow: 0 0 5px #00ff00;
-}
-
-#game-canvas {
     background: #000;
-    max-width: 90vw;
-    max-height: 70vh;
-    border: 2px solid #333;
+    box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.2);
+    border: 1px solid rgba(0, 255, 255, 0.1);
 }
 
-@media (max-width: 640px) {
-    header {
-        padding-top: 1.25rem !important;
-        padding-bottom: 1.25rem !important;
+/* ---------- Terminal reveal animation ---------- */
+@keyframes terminal-reveal {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
     }
 
-    #status-capsule {
-        padding: 0.25rem 0.5rem !important;
-        gap: 0.25rem !important;
-    }
-
-    #status-capsule span.text-gray-300 {
-        margin-left: 0.15rem !important;
-        margin-right: 0.15rem !important;
-    }
-
-    #system-status {
-        font-size: 7px !important;
-        letter-spacing: 0.15em !important;
-    }
-
-    #grid-container {
-        gap: 1.5rem !important;
-        padding-bottom: 4rem;
-    }
-
-    .card {
-        padding: 0.6rem 0.75rem !important;
-    }
-
-    .card .material-symbols-outlined {
-        font-size: 16px !important;
-    }
-
-    #edit-fab {
-        width: 2rem !important;
-        height: 2rem !important;
-    }
-
-    #clock {
-        margin-bottom: 0px !important;
-    }
-
-    #date {
-        font-size: 10px !important;
-        letter-spacing: 0.2em !important;
-    }
-
-    #mecha-hud [class*="absolute"] {
-        transform: scale(0.8);
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }
 
-@keyframes startup-shake {
-    0% {
-        transform: scale(1.1) translate(0, 0);
-    }
-
-    10% {
-        transform: scale(1.15) translate(-10px, 5px);
-    }
-
-    20% {
-        transform: scale(1.12) translate(10px, -5px);
-    }
-
-    30% {
-        transform: scale(1.15) translate(-5px, 10px);
-    }
-
-    40% {
-        transform: scale(1.12) translate(5px, -10px);
-    }
-
-    100% {
-        transform: scale(1.1) translate(0, 0);
-    }
-}
-
-@keyframes engine-rumble {
-
+/* ---------- Glitch effect ---------- */
+@keyframes glitch {
     0%,
     100% {
-        transform: scale(1.1) translate(0, 0);
+        transform: translate(0);
+        filter: none;
     }
 
     25% {
-        transform: scale(1.102) translate(1px, -1px);
+        transform: translate(-2px, 1px);
+        filter: hue-rotate(90deg);
     }
 
     50% {
-        transform: scale(1.1) translate(-1px, 1px);
+        transform: translate(2px, -1px);
+        filter: hue-rotate(180deg);
     }
 
     75% {
-        transform: scale(1.102) translate(1px, 1px);
+        transform: translate(-1px, -2px);
+        filter: hue-rotate(270deg);
     }
 }
 
-body.mecha-mode #mecha-bg img {
-    animation: startup-shake 0.5s ease-out, engine-rumble 0.2s infinite 0.5s !important;
-    will-change: transform;
+body.glitch-active {
+    animation: glitch 0.15s linear infinite;
 }
 
-body.mecha-mode #mecha-hud [id^="bar-"] {
-    animation: bar-pulse 2s infinite ease-in-out;
+body.lite-mode.glitch-active {
+    animation: none;
 }
 
-body.mecha-mode #mecha-hud {
-    text-shadow: 0 0 10px rgba(255, 120, 0, 0.7) !important;
+/* ---------- Tower button selected state ---------- */
+.tower-btn.selected {
+    border-color: #0ff !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.35);
+}
+
+/* ---------- Upgrade box display helper ---------- */
+#upgradeBox:not(.hidden) {
+    display: flex;
+}
+
+/* ---------- Pause everything when tab is hidden ---------- */
+body.paused *,
+body.paused *::before,
+body.paused *::after {
+    animation-play-state: paused !important;
+}
+
+/* ---------- Lite-mode: kill heavy effects ---------- */
+body.lite-mode .card,
+body.lite-mode .glass-card,
+body.lite-mode .glass-fab,
+body.lite-mode [class*="shadow-["] {
+    box-shadow: none !important;
+}
+
+body.lite-mode .animate-pulse {
+    animation: none !important;
+}
+
+body.lite-mode .backdrop-blur-md {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+body.lite-mode canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* ---------- Reduced motion (aksesibilitas + hemat CPU) ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
 }
