@@ -1,5 +1,5 @@
 // --- LOCAL ONLY: Supabase/Auth removed ---
-// --- PERFORMANCE OPTIMIZED: FPS cap, pre-render, debounce, visibility-pause ---
+// --- PERFORMANCE OPTIMIZED ---
 
 const IS_LITE = document.documentElement.classList.contains('lite-mode');
 
@@ -67,76 +67,73 @@ let isEditing = false;
 const getGrid = () => document.getElementById('grid-container');
 const getEditBtn = () => document.getElementById('edit-fab');
 
-// --- RENDER ---
+// --- RENDER (pakai HTML string, paling reliable dengan Tailwind CDN) ---
 function render() {
     const grid = getGrid();
     if (!grid) {
         console.error("Critical Error: #grid-container not found in DOM.");
         return;
     }
-    grid.innerHTML = '';
 
     if (!Array.isArray(categories) || categories.length === 0) {
         console.warn("Categories data invalid, falling back to defaults.");
-        categories = defaultCategories;
+        categories = JSON.parse(JSON.stringify(defaultCategories));
     }
 
-    // DocumentFragment: minim reflow
-    const frag = document.createDocumentFragment();
+    let htmlStr = '';
 
     categories.forEach((cat, cIdx) => {
-        const col = document.createElement('div');
-        col.className = "flex flex-col gap-4";
+        htmlStr += '<div class="flex flex-col gap-4">';
 
-        const header = document.createElement('div');
-        header.className = "flex items-center justify-between px-1 pb-3 mb-2 border-b border-gray-100 dark:border-gray-800";
-        header.innerHTML = `
-            <span class="text-[10px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase">${cat.title}</span>
-            <span class="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-700">${cat.icon}</span>
+        htmlStr += `
+            <div class="flex items-center justify-between px-1 pb-3 mb-2 border-b border-gray-100 dark:border-gray-800">
+                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase">${cat.title}</span>
+                <span class="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-700">${cat.icon}</span>
+            </div>
         `;
-        col.appendChild(header);
 
-        const list = document.createElement('div');
-        list.className = "flex flex-col gap-3 max-h-[180px] overflow-y-auto custom-scroll p-2 pt-2 pr-1";
+        htmlStr += '<div class="flex flex-col gap-3 max-h-[180px] overflow-y-auto custom-scroll p-2 pt-2 pr-1">';
 
         cat.items.forEach((item, iIdx) => {
-            const card = document.createElement(isEditing ? 'div' : 'a');
-            card.className = "card flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer";
+            const iconHtml = `<span class="material-symbols-outlined text-[18px] text-gray-400 dark:text-gray-500">${item.icon || 'link'}</span>`;
+            const nameHtml = `<span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex-grow truncate">${item.name}</span>`;
 
-            if (!isEditing) {
-                card.href = item.url;
-                card.target = "_blank";
-                card.rel = "noopener noreferrer";
-            } else {
-                card.onclick = () => editItem(cIdx, iIdx);
-            }
-
-            card.innerHTML = `
-                <span class="material-symbols-outlined text-[18px] text-gray-400 dark:text-gray-500">${item.icon || 'link'}</span>
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex-grow truncate">${item.name}</span>
-                ${isEditing ? `
-                    <div class="flex gap-2">
-                        <span class="material-symbols-outlined text-[14px] text-blue-400" onclick="event.stopPropagation(); editItem(${cIdx}, ${iIdx})">edit</span>
-                        <span class="material-symbols-outlined text-[14px] text-red-400" onclick="event.stopPropagation(); deleteItem(${cIdx}, ${iIdx})">delete</span>
+            if (isEditing) {
+                htmlStr += `
+                    <div class="card flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer"
+                         onclick="editItem(${cIdx}, ${iIdx})">
+                        ${iconHtml}
+                        ${nameHtml}
+                        <div class="flex gap-2">
+                            <span class="material-symbols-outlined text-[14px] text-blue-400"
+                                  onclick="event.stopPropagation(); editItem(${cIdx}, ${iIdx})">edit</span>
+                            <span class="material-symbols-outlined text-[14px] text-red-400"
+                                  onclick="event.stopPropagation(); deleteItem(${cIdx}, ${iIdx})">delete</span>
+                        </div>
                     </div>
-                ` : ''}
-            `;
-            list.appendChild(card);
+                `;
+            } else {
+                htmlStr += `
+                    <a href="${item.url}" target="_blank" rel="noopener noreferrer"
+                       class="card flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer">
+                        ${iconHtml}
+                        ${nameHtml}
+                    </a>
+                `;
+            }
         });
 
         if (isEditing) {
-            const addBtn = document.createElement('button');
-            addBtn.className = "w-full py-2 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-400 hover:text-gray-600 uppercase tracking-widest";
-            addBtn.innerText = "+ ADD";
-            addBtn.onclick = () => addItem(cIdx);
-            list.appendChild(addBtn);
+            htmlStr += `
+                <button class="w-full py-2 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-xs text-gray-400 hover:text-gray-600 uppercase tracking-widest"
+                        onclick="addItem(${cIdx})">+ ADD</button>
+            `;
         }
 
-        col.appendChild(list);
-        frag.appendChild(col);
+        htmlStr += '</div></div>';
     });
 
-    grid.appendChild(frag);
+    grid.innerHTML = htmlStr;
 }
 
 // --- ACTIONS ---
@@ -176,9 +173,16 @@ function addItem(cIdx) {
 function save() {
     try {
         localStorage.setItem('dashboardCategories', JSON.stringify(categories));
-    } catch (e) { console.warn("localStorage save failed", e); }
+    } catch (e) {
+        console.warn("localStorage save failed", e);
+    }
     render();
 }
+
+// expose ke global untuk inline onclick
+window.editItem = editItem;
+window.deleteItem = deleteItem;
+window.addItem = addItem;
 
 // --- EDIT BUTTON ---
 function bindEditBtn() {
@@ -190,9 +194,7 @@ function bindEditBtn() {
 
     editBtn.addEventListener('click', () => {
         isEditing = !isEditing;
-        document.body.classList.toggle('is-editing', isEditing);
 
-        // Toggle icon secara eksplisit
         if (iconEdit && iconCheck) {
             iconEdit.classList.toggle('hidden', isEditing);
             iconCheck.classList.toggle('hidden', !isEditing);
@@ -226,7 +228,7 @@ function bindThemeBtn() {
     });
 }
 
-// --- CLOCK (update textContent saja, skip kalau tidak berubah) ---
+// --- CLOCK ---
 const clockH = document.getElementById('clock-h');
 const clockM = document.getElementById('clock-m');
 const dateEl = document.getElementById('date');
@@ -251,14 +253,13 @@ function updateClock() {
     }
 }
 
-// --- VISIBILITY PAUSE (hemat CPU saat tab tidak aktif) ---
+// --- VISIBILITY PAUSE ---
 document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('paused', document.hidden);
 });
 
 // --- BOOTSTRAP ---
-window.addEventListener('DOMContentLoaded', () => {
-    // Theme dulu sebelum paint logika lain
+function bootstrap() {
     try {
         const savedTheme = localStorage.getItem('theme') || 'dark';
         setTheme(savedTheme === 'dark');
@@ -270,20 +271,17 @@ window.addEventListener('DOMContentLoaded', () => {
     bindEditBtn();
     bindThemeBtn();
 
-    // Clock: sinkron ke detik berikutnya biar rapi
     const now = new Date();
     setTimeout(() => {
         updateClock();
         setInterval(updateClock, 1000);
     }, (60 - now.getSeconds()) * 1000 - now.getMilliseconds());
 
-    // Status LOCAL
     const dot = document.getElementById('status-dot');
     const label = document.getElementById('system-status');
     if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]';
     if (label) label.textContent = 'LOCAL';
 
-    // Search easter egg
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -294,9 +292,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
-    // Status dot easter egg (dipindah ke sini biar konsisten DOM-ready)
     bindStatusDotEgg();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+    bootstrap();
+}
 
 // --- SYSTEM BREACH & GRID LEAK ---
 function initSystemBreach() {
@@ -310,26 +313,19 @@ function initSystemBreach() {
 
     const cols = 10;
     const size = 100 / cols;
+    let htmlStr = '';
 
-    // DocumentFragment + CSS transition-delay (hindari 100 setTimeout)
-    const frag = document.createDocumentFragment();
     for (let i = 0; i < cols * cols; i++) {
-        const box = document.createElement('div');
-        box.className = 'grid-box';
-        box.style.width = size + 'vw';
-        box.style.height = size + 'vh';
-        box.style.left = (i % cols) * size + 'vw';
-        box.style.top = Math.floor(i / cols) * size + 'vh';
-        frag.appendChild(box);
+        htmlStr += `<div class="grid-box" style="width:${size}vw;height:${size}vh;left:${(i % cols) * size}vw;top:${Math.floor(i / cols) * size}vh"></div>`;
     }
-    container.appendChild(frag);
+    container.innerHTML = htmlStr;
 
     const boxes = Array.from(container.children);
     boxes.sort(() => Math.random() - 0.5);
 
     boxes.forEach((box, i) => {
         box.style.transitionDelay = (i * 10) + 'ms';
-        void box.offsetWidth; // force reflow sekali
+        void box.offsetWidth;
         box.classList.add('active');
     });
 
@@ -375,7 +371,7 @@ function playNarrative(el, lines, index, cb) {
     }
 }
 
-// --- GAME ENGINE: SYSTEM DEFENSE PROTOCOL (TD) ---
+// --- GAME ENGINE ---
 const SysDef = {
     canvas: null,
     ctx: null,
@@ -384,7 +380,7 @@ const SysDef = {
     _lastFrame: 0,
     _saveTimeout: null,
     _pathCanvas: null,
-    _targetFPS: IS_LITE ? 24 : 45,   // frame cap dinamis
+    _targetFPS: IS_LITE ? 24 : 45,
 
     path: [
         { x: 0, y: 300 }, { x: 250, y: 300 }, { x: 250, y: 100 }, { x: 550, y: 100 },
@@ -443,7 +439,6 @@ const SysDef = {
             if (e.key === 'Escape' && this.State.running) this.exitGame();
         });
 
-        // Loop callback disimpan sekali (hindari bind berulang)
         this._loopFn = (t) => this.gameLoop(t);
     },
 
@@ -454,7 +449,6 @@ const SysDef = {
         this._buildPathCanvas();
     },
 
-    // Pre-render jalur ke offscreen canvas → tidak di-stroke tiap frame
     _buildPathCanvas() {
         const c = document.createElement('canvas');
         c.width = this.canvas.width;
@@ -488,7 +482,6 @@ const SysDef = {
         if (el) el.innerHTML = `MAX WAVE: ${this.State.meta.highWave}<br>PACKETS INTERCEPTED: ${this.State.meta.totalKills}`;
     },
 
-    // Debounce localStorage write
     saveGame() {
         this.State.meta.highWave = Math.max(this.State.meta.highWave, this.State.wave);
         if (this._saveTimeout) clearTimeout(this._saveTimeout);
@@ -524,7 +517,6 @@ const SysDef = {
     gameLoop(t) {
         if (!this.State.running || this.State.paused) return;
 
-        // Frame cap
         const interval = 1000 / this._targetFPS;
         if (this._lastFrame && (t - this._lastFrame) < interval) {
             this._raf = requestAnimationFrame(this._loopFn);
@@ -537,7 +529,6 @@ const SysDef = {
             ctx.fillStyle = '#050510';
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            // Blit jalur pre-rendered
             if (this._pathCanvas) ctx.drawImage(this._pathCanvas, 0, 0);
 
             if (this.State.enemies.length === 0) {
@@ -563,13 +554,11 @@ const SysDef = {
                 this.State.money += 5 + this.State.wave;
             }
 
-            // Towers
             for (let i = 0; i < this.State.towers.length; i++) {
                 this.State.towers[i].update();
                 this.State.towers[i].draw(ctx);
             }
 
-            // Bullets
             const bullets = this.State.bullets;
             for (let i = bullets.length - 1; i >= 0; i--) {
                 if (bullets[i].update()) {
@@ -579,7 +568,6 @@ const SysDef = {
                 }
             }
 
-            // Enemies
             const enemies = this.State.enemies;
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const e = enemies[i];
@@ -599,7 +587,6 @@ const SysDef = {
                 e.draw(ctx);
             }
 
-            // Pulses
             const pulses = this.State.pulses;
             for (let i = pulses.length - 1; i >= 0; i--) {
                 const p = pulses[i];
@@ -612,7 +599,6 @@ const SysDef = {
                 if (p.life <= 0) pulses.splice(i, 1);
             }
 
-            // Floating texts
             const fts = this.State.floatingTexts;
             for (let i = fts.length - 1; i >= 0; i--) {
                 const f = fts[i];
@@ -623,7 +609,6 @@ const SysDef = {
                 if (f.life <= 0) fts.splice(i, 1);
             }
 
-            // HUD update
             document.getElementById('moneyEl').innerText = Math.floor(this.State.money);
             document.getElementById('healthEl').innerText = Math.floor(this.State.health) + '%';
             document.getElementById('waveEl').innerText = this.State.wave;
@@ -845,25 +830,27 @@ const SysDef = {
         this.State.selectedTowerType = type;
         this.State.selectedPlacedTower = null;
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-        document.getElementById('btn-' + type).classList.add('selected');
+        const btn = document.getElementById('btn-' + type);
+        if (btn) btn.classList.add('selected');
         this.updateUI();
     },
 
     changeTargetMode() {
         if (this.State.selectedPlacedTower) {
-            this.State.selectedPlacedTower.targetMode = document.getElementById('targetMode').value;
+            const mode = document.getElementById('targetMode');
+            if (mode) this.State.selectedPlacedTower.targetMode = mode.value;
         }
     },
 
     updateUI() {
         const box = document.getElementById('upgradeBox');
+        if (!box) return;
+
         if (!this.State.selectedPlacedTower) {
             box.classList.add('hidden');
-            box.style.display = '';
             return;
         }
         box.classList.remove('hidden');
-        box.style.display = 'flex';
 
         const t = this.State.selectedPlacedTower;
         document.getElementById('towerInfo').innerText =
@@ -883,6 +870,7 @@ const SysDef = {
 
     updateBtn(id, label, lv) {
         const btn = document.getElementById(id);
+        if (!btn) return;
         const cost = lv * 100;
         btn.innerHTML = lv >= 5 ? 'MAX' : `${label} ($${cost})`;
         btn.disabled = lv >= 5 || this.State.money < cost;
@@ -890,6 +878,7 @@ const SysDef = {
 
     applyUpgrade(cat) {
         const t = this.State.selectedPlacedTower;
+        if (!t) return;
         const cost = t.lv[cat] * 100;
         if (this.State.money >= cost && t.lv[cat] < 5) {
             this.State.money -= cost;
@@ -901,6 +890,7 @@ const SysDef = {
 
     prestigeTower() {
         const t = this.State.selectedPlacedTower;
+        if (!t) return;
         if (this.State.money >= 1000 && !t.isElite) {
             this.State.money -= 1000;
             t.isElite = true;
@@ -986,6 +976,10 @@ const SysDef = {
     }
 };
 
+// expose SysDef ke global untuk onclick
+window.SysDef = SysDef;
+window.initSystemBreach = initSystemBreach;
+
 // --- STATUS DOT EASTER EGG ---
 let statusClicks = 0;
 let hudInterval = null;
@@ -1011,7 +1005,7 @@ function bindStatusDotEgg() {
 
 function startMechaHUD() {
     if (hudInterval) clearInterval(hudInterval);
-    if (IS_LITE) return; // hemat CPU di lite-mode
+    if (IS_LITE) return;
     hudInterval = setInterval(() => {
         if (document.hidden) return;
         const reactor = document.getElementById('bar-reactor');
