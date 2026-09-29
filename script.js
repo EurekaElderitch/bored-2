@@ -70,14 +70,18 @@ const getEditBtn = () => document.getElementById('edit-fab');
 // --- RENDER ---
 function render() {
     const grid = getGrid();
-    if (!grid) return;
+    if (!grid) {
+        console.error("Critical Error: #grid-container not found in DOM.");
+        return;
+    }
     grid.innerHTML = '';
 
     if (!Array.isArray(categories) || categories.length === 0) {
+        console.warn("Categories data invalid, falling back to defaults.");
         categories = defaultCategories;
     }
 
-    // DocumentFragment untuk minim reflow
+    // DocumentFragment: minim reflow
     const frag = document.createDocumentFragment();
 
     categories.forEach((cat, cIdx) => {
@@ -211,7 +215,7 @@ function bindThemeBtn() {
     });
 }
 
-// --- CLOCK (menggunakan textContent, hanya update saat berubah) ---
+// --- CLOCK (update textContent saja, skip kalau tidak berubah) ---
 const clockH = document.getElementById('clock-h');
 const clockM = document.getElementById('clock-m');
 const dateEl = document.getElementById('date');
@@ -278,6 +282,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }, { passive: true });
     }
+
+    // Status dot easter egg (dipindah ke sini biar konsisten DOM-ready)
+    bindStatusDotEgg();
 });
 
 // --- SYSTEM BREACH & GRID LEAK ---
@@ -292,8 +299,9 @@ function initSystemBreach() {
 
     const cols = 10;
     const size = 100 / cols;
-    const frag = document.createDocumentFragment();
 
+    // DocumentFragment + CSS transition-delay (hindari 100 setTimeout)
+    const frag = document.createDocumentFragment();
     for (let i = 0; i < cols * cols; i++) {
         const box = document.createElement('div');
         box.className = 'grid-box';
@@ -308,12 +316,9 @@ function initSystemBreach() {
     const boxes = Array.from(container.children);
     boxes.sort(() => Math.random() - 0.5);
 
-    // Batch dengan CSS transition-delay (hindari 100 setTimeout)
-    const total = boxes.length;
     boxes.forEach((box, i) => {
         box.style.transitionDelay = (i * 10) + 'ms';
-        // force reflow sekali biar transisi jalan
-        void box.offsetWidth;
+        void box.offsetWidth; // force reflow sekali
         box.classList.add('active');
     });
 
@@ -370,8 +375,10 @@ const SysDef = {
     _pathCanvas: null,
     _targetFPS: IS_LITE ? 24 : 45,   // frame cap dinamis
 
-    path: [{ x: 0, y: 300 }, { x: 250, y: 300 }, { x: 250, y: 100 }, { x: 550, y: 100 },
-    { x: 550, y: 450 }, { x: 150, y: 450 }, { x: 150, y: 550 }, { x: 800, y: 550 }],
+    path: [
+        { x: 0, y: 300 }, { x: 250, y: 300 }, { x: 250, y: 100 }, { x: 550, y: 100 },
+        { x: 550, y: 450 }, { x: 150, y: 450 }, { x: 150, y: 550 }, { x: 800, y: 550 }
+    ],
 
     towerTypes: {
         laser: { cost: 80, range: 120, damage: 5, color: '#0ff', type: 'laser' },
@@ -425,7 +432,7 @@ const SysDef = {
             if (e.key === 'Escape' && this.State.running) this.exitGame();
         });
 
-        // Siapkan loop callback sekali saja (hindari bind berulang)
+        // Loop callback disimpan sekali (hindari bind berulang)
         this._loopFn = (t) => this.gameLoop(t);
     },
 
@@ -470,7 +477,7 @@ const SysDef = {
         if (el) el.innerHTML = `MAX WAVE: ${this.State.meta.highWave}<br>PACKETS INTERCEPTED: ${this.State.meta.totalKills}`;
     },
 
-    // Debounce localStorage write — game loop memanggil ini tiap wave
+    // Debounce localStorage write
     saveGame() {
         this.State.meta.highWave = Math.max(this.State.meta.highWave, this.State.wave);
         if (this._saveTimeout) clearTimeout(this._saveTimeout);
@@ -545,6 +552,7 @@ const SysDef = {
                 this.State.money += 5 + this.State.wave;
             }
 
+            // Towers
             for (let i = 0; i < this.State.towers.length; i++) {
                 this.State.towers[i].update();
                 this.State.towers[i].draw(ctx);
@@ -604,7 +612,7 @@ const SysDef = {
                 if (f.life <= 0) fts.splice(i, 1);
             }
 
-            // HUD update (hanya textContent biar minim reflow)
+            // HUD update
             document.getElementById('moneyEl').innerText = Math.floor(this.State.money);
             document.getElementById('healthEl').innerText = Math.floor(this.State.health) + '%';
             document.getElementById('waveEl').innerText = this.State.wave;
@@ -971,8 +979,10 @@ const SysDef = {
 let statusClicks = 0;
 let hudInterval = null;
 
-const statusDot = document.getElementById('status-dot');
-if (statusDot) {
+function bindStatusDotEgg() {
+    const statusDot = document.getElementById('status-dot');
+    if (!statusDot) return;
+
     statusDot.addEventListener('click', () => {
         statusClicks++;
         if (statusClicks >= 5) {
