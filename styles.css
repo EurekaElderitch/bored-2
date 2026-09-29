@@ -239,3 +239,32 @@ body.lite-mode [class*="animate-"] {
         transition-duration: 0.001ms !important;
     }
 }
+
+/* ============================================================
+   DOT GRID BACKGROUND (restore)
+   ============================================================ */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1.5px);
+    background-size: 24px 24px;
+    background-position: 0 0;
+    opacity: 0.06;
+}
+
+body.dark::before {
+    opacity: 0.08;
+}
+
+/* Pastikan konten di atas pattern */
+body > * {
+    position: relative;
+    z-index: 1;
+}
+
+body.lite-mode::before {
+    display: none;
+}
