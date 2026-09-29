@@ -1,4 +1,7 @@
 // --- LOCAL ONLY: Supabase/Auth removed ---
+// --- PERFORMANCE OPTIMIZED: FPS cap, pre-render, debounce, visibility-pause ---
+
+const IS_LITE = document.documentElement.classList.contains('lite-mode');
 
 const defaultCategories = [
     {
@@ -52,7 +55,6 @@ const defaultCategories = [
 // --- STATE ---
 let categories = JSON.parse(JSON.stringify(defaultCategories));
 
-// Load from localStorage
 try {
     const saved = localStorage.getItem('dashboardCategories');
     if (saved) categories = JSON.parse(saved);
@@ -68,27 +70,27 @@ const getEditBtn = () => document.getElementById('edit-fab');
 // --- RENDER ---
 function render() {
     const grid = getGrid();
-    if (!grid) {
-        console.error("Critical Error: #grid-container not found in DOM.");
-        return;
-    }
+    if (!grid) return;
     grid.innerHTML = '';
 
     if (!Array.isArray(categories) || categories.length === 0) {
-        console.warn("Categories data invalid, falling back to defaults.");
         categories = defaultCategories;
     }
+
+    // DocumentFragment untuk minim reflow
+    const frag = document.createDocumentFragment();
 
     categories.forEach((cat, cIdx) => {
         const col = document.createElement('div');
         col.className = "flex flex-col gap-4";
 
-        col.innerHTML = `
-            <div class="flex items-center justify-between px-1 pb-3 mb-2 border-b border-gray-100 dark:border-gray-800">
-                <span class="text-[10px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase">${cat.title}</span>
-                <span class="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-700">${cat.icon}</span>
-            </div>
+        const header = document.createElement('div');
+        header.className = "flex items-center justify-between px-1 pb-3 mb-2 border-b border-gray-100 dark:border-gray-800";
+        header.innerHTML = `
+            <span class="text-[10px] font-bold tracking-[0.2em] text-gray-400 dark:text-gray-500 uppercase">${cat.title}</span>
+            <span class="material-symbols-outlined text-[16px] text-gray-300 dark:text-gray-700">${cat.icon}</span>
         `;
+        col.appendChild(header);
 
         const list = document.createElement('div');
         list.className = "flex flex-col gap-3 max-h-[180px] overflow-y-auto custom-scroll p-2 pt-2 pr-1";
@@ -100,6 +102,7 @@ function render() {
             if (!isEditing) {
                 card.href = item.url;
                 card.target = "_blank";
+                card.rel = "noopener noreferrer";
             } else {
                 card.onclick = () => editItem(cIdx, iIdx);
             }
@@ -126,8 +129,10 @@ function render() {
         }
 
         col.appendChild(list);
-        grid.appendChild(col);
+        frag.appendChild(col);
     });
+
+    grid.appendChild(frag);
 }
 
 // --- ACTIONS ---
@@ -165,21 +170,22 @@ function addItem(cIdx) {
 }
 
 function save() {
-    localStorage.setItem('dashboardCategories', JSON.stringify(categories));
+    try {
+        localStorage.setItem('dashboardCategories', JSON.stringify(categories));
+    } catch (e) { console.warn("localStorage save failed", e); }
     render();
 }
 
 // --- EDIT BUTTON ---
-setTimeout(() => {
+function bindEditBtn() {
     const editBtn = getEditBtn();
     if (!editBtn) return;
-
     editBtn.addEventListener('click', () => {
         isEditing = !isEditing;
         document.body.classList.toggle('is-editing', isEditing);
         render();
     });
-}, 1000);
+}
 
 // --- THEME ---
 const html = document.documentElement;
@@ -189,65 +195,90 @@ function setTheme(isDark) {
     if (isDark) {
         html.classList.add('dark');
         body.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
+        try { localStorage.setItem('theme', 'dark'); } catch (e) { }
     } else {
         html.classList.remove('dark');
         body.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
+        try { localStorage.setItem('theme', 'light'); } catch (e) { }
     }
 }
 
-setTimeout(() => {
+function bindThemeBtn() {
     const themeBtn = document.getElementById('theme-toggle');
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            setTheme(!html.classList.contains('dark'));
-        });
-    }
-}, 1000);
-
-const savedTheme = localStorage.getItem('theme') || 'dark';
-setTheme(savedTheme === 'dark');
-
-// --- CLOCK ---
-function updateClock() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-
-    document.getElementById('clock').innerHTML = `${hours}<span class="animate-pulse text-gray-400 dark:text-gray-500 mx-1">:</span>${minutes}`;
-
-    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
-    document.getElementById('date').innerHTML = `
-        ${days[now.getDay()]} <span class="text-gray-300 dark:text-gray-700 mx-2">/</span> ${months[now.getMonth()]} ${now.getDate()}
-    `;
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// --- INITIAL RENDER ---
-render();
-
-// Set status to LOCAL
-const dot = document.getElementById('status-dot');
-const label = document.getElementById('system-status');
-if (dot) {
-    dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]';
-}
-if (label) label.innerText = 'LOCAL';
-
-// --- EASTER EGG: DETECT CODE ---
-const searchInput = document.getElementById('search-input');
-if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-        if (e.target.value.toLowerCase() === 'grid eater') {
-            e.target.value = '';
-            initSystemBreach();
-        }
+    if (!themeBtn) return;
+    themeBtn.addEventListener('click', () => {
+        setTheme(!html.classList.contains('dark'));
     });
 }
+
+// --- CLOCK (menggunakan textContent, hanya update saat berubah) ---
+const clockH = document.getElementById('clock-h');
+const clockM = document.getElementById('clock-m');
+const dateEl = document.getElementById('date');
+
+const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+let _lastH = '', _lastM = '', _lastDate = '';
+
+function updateClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+
+    if (hh !== _lastH && clockH) { clockH.textContent = hh; _lastH = hh; }
+    if (mm !== _lastM && clockM) { clockM.textContent = mm; _lastM = mm; }
+
+    const dateStr = `${DAYS[now.getDay()]} <span class="text-gray-300 dark:text-gray-700 mx-2">/</span> ${MONTHS[now.getMonth()]} ${now.getDate()}`;
+    if (dateStr !== _lastDate && dateEl) {
+        dateEl.innerHTML = dateStr;
+        _lastDate = dateStr;
+    }
+}
+
+// --- VISIBILITY PAUSE (hemat CPU saat tab tidak aktif) ---
+document.addEventListener('visibilitychange', () => {
+    document.body.classList.toggle('paused', document.hidden);
+});
+
+// --- BOOTSTRAP ---
+window.addEventListener('DOMContentLoaded', () => {
+    // Theme dulu sebelum paint logika lain
+    try {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme === 'dark');
+    } catch (e) {
+        setTheme(true);
+    }
+
+    render();
+    bindEditBtn();
+    bindThemeBtn();
+
+    // Clock: sinkron ke detik berikutnya biar rapi
+    const now = new Date();
+    setTimeout(() => {
+        updateClock();
+        setInterval(updateClock, 1000);
+    }, (60 - now.getSeconds()) * 1000 - now.getMilliseconds());
+
+    // Status LOCAL
+    const dot = document.getElementById('status-dot');
+    const label = document.getElementById('system-status');
+    if (dot) dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]';
+    if (label) label.textContent = 'LOCAL';
+
+    // Search easter egg
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            if (e.target.value.toLowerCase() === 'grid eater') {
+                e.target.value = '';
+                initSystemBreach();
+            }
+        }, { passive: true });
+    }
+});
 
 // --- SYSTEM BREACH & GRID LEAK ---
 function initSystemBreach() {
@@ -260,24 +291,30 @@ function initSystemBreach() {
     container.innerHTML = '';
 
     const cols = 10;
-    const rows = 10;
     const size = 100 / cols;
+    const frag = document.createDocumentFragment();
 
-    for (let i = 0; i < cols * rows; i++) {
+    for (let i = 0; i < cols * cols; i++) {
         const box = document.createElement('div');
         box.className = 'grid-box';
         box.style.width = size + 'vw';
         box.style.height = size + 'vh';
         box.style.left = (i % cols) * size + 'vw';
         box.style.top = Math.floor(i / cols) * size + 'vh';
-        container.appendChild(box);
+        frag.appendChild(box);
     }
+    container.appendChild(frag);
 
     const boxes = Array.from(container.children);
     boxes.sort(() => Math.random() - 0.5);
 
+    // Batch dengan CSS transition-delay (hindari 100 setTimeout)
+    const total = boxes.length;
     boxes.forEach((box, i) => {
-        setTimeout(() => box.classList.add('active'), i * 10);
+        box.style.transitionDelay = (i * 10) + 'ms';
+        // force reflow sekali biar transisi jalan
+        void box.offsetWidth;
+        box.classList.add('active');
     });
 
     setTimeout(() => {
@@ -315,9 +352,7 @@ function playNarrative(el, lines, index, cb) {
         line.style.animation = 'terminal-reveal 0.3s ease-out forwards';
         line.innerText = `> ${lines[index]}`;
         el.appendChild(line);
-
         el.scrollTop = el.scrollHeight;
-
         setTimeout(() => playNarrative(el, lines, index + 1, cb), 600);
     } else if (cb) {
         setTimeout(cb, 1000);
@@ -328,7 +363,16 @@ function playNarrative(el, lines, index, cb) {
 const SysDef = {
     canvas: null,
     ctx: null,
-    path: [{ x: 0, y: 300 }, { x: 250, y: 300 }, { x: 250, y: 100 }, { x: 550, y: 100 }, { x: 550, y: 450 }, { x: 150, y: 450 }, { x: 150, y: 550 }, { x: 800, y: 550 }],
+    _raf: null,
+    _loopFn: null,
+    _lastFrame: 0,
+    _saveTimeout: null,
+    _pathCanvas: null,
+    _targetFPS: IS_LITE ? 24 : 45,   // frame cap dinamis
+
+    path: [{ x: 0, y: 300 }, { x: 250, y: 300 }, { x: 250, y: 100 }, { x: 550, y: 100 },
+    { x: 550, y: 450 }, { x: 150, y: 450 }, { x: 150, y: 550 }, { x: 800, y: 550 }],
+
     towerTypes: {
         laser: { cost: 80, range: 120, damage: 5, color: '#0ff', type: 'laser' },
         slow: { cost: 120, range: 100, damage: 1, color: '#0f0', type: 'slow' },
@@ -358,7 +402,7 @@ const SysDef = {
 
     init() {
         this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         document.body.classList.add('defense-mode');
         document.getElementById('defense-protocol').classList.remove('hidden');
         document.getElementById('startScreen').classList.remove('hidden');
@@ -367,42 +411,75 @@ const SysDef = {
 
         this.loadSave();
         this.resize();
-        window.addEventListener('resize', () => this.resize());
 
-        this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
+        window.addEventListener('resize', () => this.resize(), { passive: true });
+
+        this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e), { passive: true });
         this.canvas.addEventListener('pointermove', (e) => {
             const r = this.canvas.getBoundingClientRect();
             this.State.mouse.x = e.clientX - r.left;
             this.State.mouse.y = e.clientY - r.top;
-        });
+        }, { passive: true });
 
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.State.running) {
-                this.exitGame();
-            }
+            if (e.key === 'Escape' && this.State.running) this.exitGame();
         });
+
+        // Siapkan loop callback sekali saja (hindari bind berulang)
+        this._loopFn = (t) => this.gameLoop(t);
     },
 
     resize() {
         if (!this.canvas) return;
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+        this._buildPathCanvas();
+    },
+
+    // Pre-render jalur ke offscreen canvas → tidak di-stroke tiap frame
+    _buildPathCanvas() {
+        const c = document.createElement('canvas');
+        c.width = this.canvas.width;
+        c.height = this.canvas.height;
+        const cx = c.getContext('2d');
+
+        cx.shadowBlur = 15; cx.shadowColor = '#0ff';
+        cx.strokeStyle = '#001a1a'; cx.lineWidth = 40;
+        cx.lineCap = 'round'; cx.lineJoin = 'round';
+        cx.beginPath();
+        cx.moveTo(this.path[0].x, this.path[0].y);
+        for (let i = 1; i < this.path.length; i++) cx.lineTo(this.path[i].x, this.path[i].y);
+        cx.stroke();
+
+        cx.shadowBlur = 5; cx.strokeStyle = '#003333'; cx.lineWidth = 4;
+        cx.stroke();
+
+        this._pathCanvas = c;
     },
 
     loadSave() {
-        const data = localStorage.getItem("sysdef_meta_v1");
-        if (data) this.State.meta = JSON.parse(data);
+        try {
+            const data = localStorage.getItem("sysdef_meta_v1");
+            if (data) this.State.meta = JSON.parse(data);
+        } catch (e) { }
         this.updateMetaDisplay();
     },
 
     updateMetaDisplay() {
-        document.getElementById('metaInfo').innerHTML = `MAX WAVE: ${this.State.meta.highWave}<br>PACKETS INTERCEPTED: ${this.State.meta.totalKills}`;
+        const el = document.getElementById('metaInfo');
+        if (el) el.innerHTML = `MAX WAVE: ${this.State.meta.highWave}<br>PACKETS INTERCEPTED: ${this.State.meta.totalKills}`;
     },
 
+    // Debounce localStorage write — game loop memanggil ini tiap wave
     saveGame() {
         this.State.meta.highWave = Math.max(this.State.meta.highWave, this.State.wave);
-        localStorage.setItem("sysdef_meta_v1", JSON.stringify(this.State.meta));
-        this.updateMetaDisplay();
+        if (this._saveTimeout) clearTimeout(this._saveTimeout);
+        this._saveTimeout = setTimeout(() => {
+            try {
+                localStorage.setItem("sysdef_meta_v1", JSON.stringify(this.State.meta));
+            } catch (e) { }
+            this.updateMetaDisplay();
+        }, 400);
     },
 
     startGame() {
@@ -410,31 +487,40 @@ const SysDef = {
         this.State.health = 100 + (this.State.meta.coreHealthLv * 25);
         this.State.wave = 0;
         this.State.hasShownWave10Msg = false;
-        this.State.enemies = []; this.State.towers = []; this.State.bullets = [];
+        this.State.enemies = [];
+        this.State.towers = [];
+        this.State.bullets = [];
+        this.State.pulses = [];
+        this.State.floatingTexts = [];
         this.State.paused = false;
 
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('endScreen').classList.add('hidden');
         document.getElementById('controlPanel').classList.remove('hidden');
+
         this.State.running = true;
-        this.gameLoop();
+        this._lastFrame = 0;
+        this._raf = requestAnimationFrame(this._loopFn);
     },
 
-    gameLoop() {
+    gameLoop(t) {
         if (!this.State.running || this.State.paused) return;
+
+        // Frame cap
+        const interval = 1000 / this._targetFPS;
+        if (this._lastFrame && (t - this._lastFrame) < interval) {
+            this._raf = requestAnimationFrame(this._loopFn);
+            return;
+        }
+        this._lastFrame = t;
 
         try {
             const ctx = this.ctx;
             ctx.fillStyle = '#050510';
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-            ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
-            ctx.strokeStyle = '#001a1a'; ctx.lineWidth = 40; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            ctx.beginPath(); ctx.moveTo(this.path[0].x, this.path[0].y); this.path.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke();
-
-            ctx.shadowBlur = 5; ctx.strokeStyle = '#003333'; ctx.lineWidth = 4;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
+            // Blit jalur pre-rendered
+            if (this._pathCanvas) ctx.drawImage(this._pathCanvas, 0, 0);
 
             if (this.State.enemies.length === 0) {
                 if (this.State.wave === 10 && !this.State.hasShownWave10Msg) {
@@ -447,40 +533,78 @@ const SysDef = {
                 this.saveGame();
                 const count = 5 + this.State.wave * 2;
                 for (let i = 0; i < count; i++) {
-                    setTimeout(() => { if (this.State.running && !this.State.paused) this.State.enemies.push(new this.Enemy(this.State.wave)); }, i * Math.max(200, 600 - this.State.wave * 10));
+                    setTimeout(() => {
+                        if (this.State.running && !this.State.paused) {
+                            this.State.enemies.push(new this.Enemy(this.State.wave));
+                        }
+                    }, i * Math.max(200, 600 - this.State.wave * 10));
                 }
             }
 
-            if (this.State.running && !this.State.paused && Math.random() < 0.02) {
+            if (Math.random() < 0.02) {
                 this.State.money += 5 + this.State.wave;
             }
 
-            this.State.towers.forEach(t => { t.update(); t.draw(ctx); });
-            this.State.bullets = this.State.bullets.filter(b => { if (b.update()) return false; b.draw(ctx); return true; });
-            this.State.enemies = this.State.enemies.filter(e => {
+            for (let i = 0; i < this.State.towers.length; i++) {
+                this.State.towers[i].update();
+                this.State.towers[i].draw(ctx);
+            }
+
+            // Bullets
+            const bullets = this.State.bullets;
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                if (bullets[i].update()) {
+                    bullets.splice(i, 1);
+                } else {
+                    bullets[i].draw(ctx);
+                }
+            }
+
+            // Enemies
+            const enemies = this.State.enemies;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
                 if (e.health <= 0) {
                     e.die();
                     this.State.money += e.reward + 10 + this.State.wave;
                     this.State.meta.totalKills++;
-                    return false;
+                    enemies.splice(i, 1);
+                    continue;
                 }
                 if (e.targetIdx >= this.path.length) {
-                    this.State.health -= 10;
-                    this.State.health = Math.max(0, this.State.health);
-                    return false;
+                    this.State.health = Math.max(0, this.State.health - 10);
+                    enemies.splice(i, 1);
+                    continue;
                 }
-                e.update(); e.draw(ctx); return true;
-            });
+                e.update();
+                e.draw(ctx);
+            }
 
-            this.State.pulses = this.State.pulses.filter(p => {
-                ctx.strokeStyle = p.c; ctx.globalAlpha = p.life; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 - p.life), 0, Math.PI * 2); ctx.stroke();
-                p.life -= 0.04; return p.life > 0;
-            });
-            this.State.floatingTexts = this.State.floatingTexts.filter(f => {
-                ctx.fillStyle = `rgba(255,255,255,${f.life})`; ctx.font = '10px monospace'; ctx.fillText(f.text, f.x, f.y - (1 - f.life) * 20);
-                f.life -= 0.02; return f.life > 0;
-            });
+            // Pulses
+            const pulses = this.State.pulses;
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                const p = pulses[i];
+                ctx.strokeStyle = p.c;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r * (1 - p.life), 0, Math.PI * 2);
+                ctx.stroke();
+                p.life -= 0.04;
+                if (p.life <= 0) pulses.splice(i, 1);
+            }
 
+            // Floating texts
+            const fts = this.State.floatingTexts;
+            for (let i = fts.length - 1; i >= 0; i--) {
+                const f = fts[i];
+                ctx.fillStyle = `rgba(255,255,255,${f.life})`;
+                ctx.font = '10px monospace';
+                ctx.fillText(f.text, f.x, f.y - (1 - f.life) * 20);
+                f.life -= 0.02;
+                if (f.life <= 0) fts.splice(i, 1);
+            }
+
+            // HUD update (hanya textContent biar minim reflow)
             document.getElementById('moneyEl').innerText = Math.floor(this.State.money);
             document.getElementById('healthEl').innerText = Math.floor(this.State.health) + '%';
             document.getElementById('waveEl').innerText = this.State.wave;
@@ -493,14 +617,15 @@ const SysDef = {
             console.error("SysDef Game Loop Error:", e);
         }
 
-        requestAnimationFrame(() => this.gameLoop());
+        this._raf = requestAnimationFrame(this._loopFn);
     },
 
     handleInput(e) {
         if (!this.State.running || this.State.paused) return;
         const r = this.canvas.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
-        const gx = Math.floor(x / this.State.gridSize), gy = Math.floor(y / this.State.gridSize);
+        const gx = Math.floor(x / this.State.gridSize);
+        const gy = Math.floor(y / this.State.gridSize);
 
         const clicked = this.State.towers.find(t => t.gx === gx && t.gy === gy);
         if (clicked) {
@@ -521,7 +646,8 @@ const SysDef = {
     },
 
     isOnPath(gx, gy) {
-        const cx = gx * this.State.gridSize + 20, cy = gy * this.State.gridSize + 20;
+        const cx = gx * this.State.gridSize + 20;
+        const cy = gy * this.State.gridSize + 20;
         for (let i = 0; i < this.path.length - 1; i++) {
             if (this.distToSegment({ x: cx, y: cy }, this.path[i], this.path[i + 1]) < 25) return true;
         }
@@ -538,7 +664,8 @@ const SysDef = {
 
     Enemy: class {
         constructor(wave) {
-            this.x = SysDef.path[0].x; this.y = SysDef.path[0].y;
+            this.x = SysDef.path[0].x;
+            this.y = SysDef.path[0].y;
             this.targetIdx = 1;
             const waveMult = Math.pow(1.15, wave);
             this.maxHealth = 20 + (wave * 15 * waveMult);
@@ -547,7 +674,11 @@ const SysDef = {
             this.slowed = 0;
             this.reward = 25 + Math.floor(wave * 2);
             this.isBoss = (wave % 5 === 0);
-            if (this.isBoss) { this.maxHealth *= 5; this.speed *= 0.6; this.reward *= 5; }
+            if (this.isBoss) {
+                this.maxHealth *= 5;
+                this.speed *= 0.6;
+                this.reward *= 5;
+            }
         }
         update() {
             if (this.slowed > 0) this.slowed--;
@@ -558,30 +689,35 @@ const SysDef = {
             if (dist < move) {
                 this.targetIdx++;
             } else {
-                this.x += (dx / dist) * move; this.y += (dy / dist) * move;
+                this.x += (dx / dist) * move;
+                this.y += (dy / dist) * move;
             }
         }
         draw(ctx) {
-            let color = this.slowed > 0 ? '#0ff' : (this.isBoss ? '#f0f' : '#f33');
-            ctx.shadowBlur = 10; ctx.shadowColor = color;
+            const color = this.slowed > 0 ? '#0ff' : (this.isBoss ? '#f0f' : '#f33');
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
             ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(this.x, this.y, this.isBoss ? 16 : 10, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.isBoss ? 16 : 10, 0, Math.PI * 2);
+            ctx.fill();
             ctx.shadowBlur = 0;
-            ctx.fillStyle = '#0f0'; ctx.fillRect(this.x - 10, this.y - 18, (this.health / this.maxHealth) * 20, 3);
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(this.x - 10, this.y - 18, (this.health / this.maxHealth) * 20, 3);
         }
-        takeDamage(dmg) {
-            this.health -= dmg;
-        }
-        die() {
-        }
+        takeDamage(dmg) { this.health -= dmg; }
+        die() { }
     },
 
     Tower: class {
         constructor(gx, gy, cfg) {
             this.gx = gx; this.gy = gy;
-            this.x = gx * 40 + 20; this.y = gy * 40 + 20;
-            this.range = cfg.range; this.damage = cfg.damage;
-            this.color = cfg.color; this.type = cfg.type;
+            this.x = gx * 40 + 20;
+            this.y = gy * 40 + 20;
+            this.range = cfg.range;
+            this.damage = cfg.damage;
+            this.color = cfg.color;
+            this.type = cfg.type;
             this.lv = { speed: 1, power: 1, range: 1 };
             this.cooldown = 0;
             this.targetMode = 'first';
@@ -590,9 +726,15 @@ const SysDef = {
         update() {
             if (this.cooldown > 0) this.cooldown--;
             if (this.cooldown <= 0) {
-                const targets = SysDef.State.enemies.filter(e => Math.sqrt((e.x - this.x) ** 2 + (e.y - this.y) ** 2) < this.range);
-                if (targets.length) {
-                    let target = targets[0];
+                const enemies = SysDef.State.enemies;
+                let target = null;
+                const r2 = this.range * this.range;
+                for (let i = 0; i < enemies.length; i++) {
+                    const e = enemies[i];
+                    const dx = e.x - this.x, dy = e.y - this.y;
+                    if (dx * dx + dy * dy < r2) { target = e; break; }
+                }
+                if (target) {
                     this.fire(target);
                     let baseCd = (this.type === 'multi' ? 50 : 20);
                     if (this.isElite) baseCd *= 0.6;
@@ -605,30 +747,44 @@ const SysDef = {
             if (this.isElite) dmg *= 2.5;
 
             if (this.type === 'slow' && (this.lv.range >= 3 || this.isElite)) {
-                SysDef.State.enemies.forEach(e => {
-                    if (Math.sqrt((e.x - this.x) ** 2 + (e.y - this.y) ** 2) < this.range) {
+                const r2 = this.range * this.range;
+                const enemies = SysDef.State.enemies;
+                for (let i = 0; i < enemies.length; i++) {
+                    const e = enemies[i];
+                    const dx = e.x - this.x, dy = e.y - this.y;
+                    if (dx * dx + dy * dy < r2) {
                         e.takeDamage(dmg);
                         e.slowed = this.isElite ? 120 : 60;
                     }
-                });
+                }
                 SysDef.State.pulses.push({ x: this.x, y: this.y, r: this.range, c: this.color, life: 1 });
             } else {
-                SysDef.State.bullets.push(new SysDef.Bullet(this.x, this.y, target, dmg, this.color, this.type === 'slow', this.isElite));
+                SysDef.State.bullets.push(
+                    new SysDef.Bullet(this.x, this.y, target, dmg, this.color,
+                        this.type === 'slow', this.isElite)
+                );
             }
         }
         draw(ctx) {
             ctx.shadowBlur = this.isElite ? 15 : 0;
             ctx.shadowColor = this.color;
-            ctx.strokeStyle = this.color; ctx.lineWidth = this.isElite ? 4 : 2;
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = this.isElite ? 4 : 2;
             ctx.strokeRect(this.x - 12, this.y - 12, 24, 24);
             if (this.isElite) {
                 ctx.strokeRect(this.x - 8, this.y - 8, 16, 16);
-                ctx.fillStyle = this.color; ctx.globalAlpha = 0.3;
-                ctx.fillRect(this.x - 12, this.y - 12, 24, 24); ctx.globalAlpha = 1;
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(this.x - 12, this.y - 12, 24, 24);
+                ctx.globalAlpha = 1;
             }
             if (SysDef.State.selectedPlacedTower === this) {
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(0,255,255,0.2)'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0,255,255,0.2)';
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
             ctx.shadowBlur = 0;
         }
@@ -636,25 +792,33 @@ const SysDef = {
 
     Bullet: class {
         constructor(x, y, target, dmg, color, isSlow, isElite) {
-            this.x = x; this.y = y; this.target = target; this.dmg = dmg; this.color = color; this.isSlow = isSlow;
+            this.x = x; this.y = y;
+            this.target = target;
+            this.dmg = dmg;
+            this.color = color;
+            this.isSlow = isSlow;
             this.isElite = isElite;
             this.speed = isElite ? 15 : 10;
         }
         update() {
             if (!this.target || this.target.health <= 0) return true;
-
-            const dx = this.target.x - this.x, dy = this.target.y - this.y;
+            const dx = this.target.x - this.x;
+            const dy = this.target.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < this.speed) {
                 this.target.takeDamage(this.dmg);
                 if (this.isSlow) this.target.slowed = this.isElite ? 120 : 60;
                 return true;
             }
-            this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
+            this.x += (dx / dist) * this.speed;
+            this.y += (dy / dist) * this.speed;
             return false;
         }
         draw(ctx) {
-            ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.isElite ? 5 : 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.isElite ? 5 : 3, 0, Math.PI * 2);
+            ctx.fill();
         }
     },
 
@@ -666,21 +830,36 @@ const SysDef = {
         this.updateUI();
     },
 
+    changeTargetMode() {
+        if (this.State.selectedPlacedTower) {
+            this.State.selectedPlacedTower.targetMode = document.getElementById('targetMode').value;
+        }
+    },
+
     updateUI() {
         const box = document.getElementById('upgradeBox');
-        if (!this.State.selectedPlacedTower) { box.classList.add('hidden'); return; }
-
+        if (!this.State.selectedPlacedTower) {
+            box.classList.add('hidden');
+            box.style.display = '';
+            return;
+        }
         box.classList.remove('hidden');
+        box.style.display = 'flex';
+
         const t = this.State.selectedPlacedTower;
-        document.getElementById('towerInfo').innerText = (t.isElite ? "ELITE " : "") + `${t.type.toUpperCase()} LV.${Math.max(t.lv.speed, t.lv.power, t.lv.range)}`;
+        document.getElementById('towerInfo').innerText =
+            (t.isElite ? "ELITE " : "") +
+            `${t.type.toUpperCase()} LV.${Math.max(t.lv.speed, t.lv.power, t.lv.range)}`;
 
         this.updateBtn('upSpeed', 'THROUGHPUT', t.lv.speed);
         this.updateBtn('upPower', 'INTEGRITY', t.lv.power);
         this.updateBtn('upRange', 'COVERAGE', t.lv.range);
 
         const canPrestige = t.lv.speed >= 5 && t.lv.power >= 5 && t.lv.range >= 5 && !t.isElite;
-        const pBtn = document.getElementById('prestigeBtn');
-        pBtn.classList.toggle('hidden', !canPrestige);
+        document.getElementById('prestigeBtn').classList.toggle('hidden', !canPrestige);
+
+        const tm = document.getElementById('targetMode');
+        if (tm) tm.value = t.targetMode || 'first';
     },
 
     updateBtn(id, label, lv) {
@@ -715,21 +894,21 @@ const SysDef = {
         if (this.State.money >= 500) {
             this.State.money -= 500;
             this.State.enemies.forEach(e => e.takeDamage(1000));
-            this.State.pulses.push({ x: this.canvas.width / 2, y: this.canvas.height / 2, r: 1000, c: '#f00', life: 1 });
+            this.State.pulses.push({
+                x: this.canvas.width / 2,
+                y: this.canvas.height / 2,
+                r: 1000, c: '#f00', life: 1
+            });
         }
     },
 
     sellSelected() {
         const t = this.State.selectedPlacedTower;
         if (t) {
-            const type = t.type;
-            const refund = Math.floor(this.towerTypes[type].cost * 0.7);
+            const refund = Math.floor(this.towerTypes[t.type].cost * 0.7);
             this.State.money += refund;
-
             this.State.towers = this.State.towers.filter(tower => tower !== t);
-
             this.State.floatingTexts.push({ x: t.x, y: t.y, text: `+${refund}`, life: 1 });
-
             this.State.selectedPlacedTower = null;
             this.updateUI();
         }
@@ -741,8 +920,10 @@ const SysDef = {
     },
 
     continuePlaying() {
-        this.State.paused = false;
         document.getElementById('waveNotify').classList.add('hidden');
+        this.State.paused = false;
+        this._lastFrame = 0;
+        this._raf = requestAnimationFrame(this._loopFn);
     },
 
     finishGame() {
@@ -752,11 +933,13 @@ const SysDef = {
 
     endGame(status) {
         this.State.running = false;
+        if (this._raf) cancelAnimationFrame(this._raf);
         this.saveGame();
         document.getElementById('endScreen').classList.remove('hidden');
         document.getElementById('controlPanel').classList.add('hidden');
         document.getElementById('endStatus').innerText = status;
-        document.getElementById('finalScore').innerHTML = `WAVES SURVIVED: ${this.State.wave}<br>TOTAL PACKETS: ${this.State.meta.totalKills}`;
+        document.getElementById('finalScore').innerHTML =
+            `WAVES SURVIVED: ${this.State.wave}<br>TOTAL PACKETS: ${this.State.meta.totalKills}`;
     },
 
     upgradeMeta(type) {
@@ -776,8 +959,11 @@ const SysDef = {
 
     exitGame() {
         this.State.running = false;
+        if (this._raf) cancelAnimationFrame(this._raf);
+        this.saveGame();
         document.body.classList.remove('defense-mode');
         document.getElementById('defense-protocol').classList.add('hidden');
+        document.getElementById('waveNotify').classList.add('hidden');
     }
 };
 
@@ -794,11 +980,8 @@ if (statusDot) {
             const status = document.getElementById('system-status');
             if (status) status.innerText = isOverdrive ? "SYSTEM OVERDRIVE" : "LOCAL";
 
-            if (isOverdrive) {
-                startMechaHUD();
-            } else {
-                stopMechaHUD();
-            }
+            if (isOverdrive) startMechaHUD();
+            else stopMechaHUD();
 
             statusClicks = 0;
         }
@@ -807,7 +990,9 @@ if (statusDot) {
 
 function startMechaHUD() {
     if (hudInterval) clearInterval(hudInterval);
+    if (IS_LITE) return; // hemat CPU di lite-mode
     hudInterval = setInterval(() => {
+        if (document.hidden) return;
         const reactor = document.getElementById('bar-reactor');
         const heat = document.getElementById('bar-heat');
         const sync = document.getElementById('bar-sync');
@@ -817,8 +1002,7 @@ function startMechaHUD() {
         if (heat) heat.style.height = (30 + Math.random() * 40) + '%';
         if (sync) sync.style.width = (95 + Math.random() * 4) + '%';
         if (link) link.style.width = (80 + Math.random() * 15) + '%';
-
-    }, 2000);
+    }, 2500);
 }
 
 function stopMechaHUD() {
