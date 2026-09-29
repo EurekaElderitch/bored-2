@@ -7,7 +7,7 @@
 
     <title>Arcade Dashboard</title>
 
-    <!-- Pre-paint low-spec detection (mencegah FOUC & layout berat) -->
+    <!-- Pre-paint low-spec detection -->
     <script>
         (function () {
             try {
@@ -20,7 +20,6 @@
         })();
     </script>
 
-    <!-- Preconnect font (kurangi latency DNS/TLS) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -43,7 +42,6 @@
     <header
         class="w-full max-w-[1600px] mx-auto px-4 md:px-12 py-4 md:py-5 flex justify-between items-center md:items-start select-none relative z-50">
 
-        <!-- Left: Status -->
         <div class="flex flex-col gap-1">
             <div id="status-capsule"
                 class="flex items-center gap-0.5 md:gap-1 p-1 px-2 md:p-1.5 md:px-3 rounded-full glass-card border border-gray-200/50 dark:border-gray-800/50 shadow-sm cursor-pointer hover:scale-105 transition-transform">
@@ -54,7 +52,6 @@
             </div>
         </div>
 
-        <!-- Right: Controls -->
         <div class="flex items-center gap-3 md:gap-6">
             <button id="theme-toggle"
                 class="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors">
@@ -63,7 +60,7 @@
         </div>
     </header>
 
-    <!-- Mecha Cinematic Backgrounds -->
+    <!-- Mecha Backgrounds -->
     <div id="mecha-bg"
         class="fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-1000 z-30 overflow-hidden">
         <img src="assets/titanfall_cockpit_idle_1767881576765.png" alt="Titanfall Cockpit"
@@ -73,18 +70,15 @@
         <div class="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]"></div>
     </div>
 
-    <!-- Mecha HUD Overlay (Visible in Overdrive Mode) -->
+    <!-- Mecha HUD -->
     <div id="mecha-hud"
         class="fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-700 z-40 overflow-hidden">
 
-        <!-- Background Grid -->
         <div
             class="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(255,0,0,0.03)_100%)] opacity-20">
         </div>
-        <!-- Carbon-fibre via CSS gradient (bebas request eksternal) -->
         <div class="absolute inset-0 opacity-[0.03] pointer-events-none mecha-carbon"></div>
 
-        <!-- Central Targeting Reticle -->
         <div
             class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px]">
             <div
@@ -94,16 +88,13 @@
             <div class="absolute inset-[20%] right-0 border-t-2 border-r-2 border-red-500/40 w-12 h-12 ml-auto"></div>
             <div class="absolute bottom-[20%] left-[20%] border-b-2 border-l-2 border-red-500/40 w-12 h-12"></div>
             <div class="absolute bottom-[20%] right-[20%] border-b-2 border-r-2 border-red-500/40 w-12 h-12"></div>
-
             <div class="absolute top-1/2 left-0 w-full h-[1px] bg-red-500/30 animate-[pulse_2s_infinite]"></div>
             <div class="absolute top-0 left-1/2 w-[1px] h-full bg-red-500/30 animate-[pulse_2s_infinite]"></div>
-
             <div
                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-600 rounded-full shadow-[0_0_10px_#ff0000]">
             </div>
         </div>
 
-        <!-- Left HUD: Reactor/Heat -->
         <div
             class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 md:gap-8 scale-75 md:scale-100 origin-left">
             <div class="flex flex-col gap-2">
@@ -137,7 +128,6 @@
             </div>
         </div>
 
-        <!-- Right HUD: Sync Rate/Shield -->
         <div
             class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 flex flex-col items-end gap-6 md:gap-8 scale-75 md:scale-100 origin-right">
             <div class="flex flex-col items-end gap-2 text-right">
@@ -167,14 +157,12 @@
             </div>
         </div>
 
-        <!-- Top/Bottom Labels -->
         <div class="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-4 opacity-40">
             <span class="text-[7px] font-mono text-red-500">MK-01 PROTOCOL</span>
             <div class="w-24 h-[1px] bg-red-500/30"></div>
             <span class="text-[7px] font-mono text-red-500">00:04:26:01</span>
         </div>
 
-        <!-- Corner Brackets -->
         <div
             class="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-red-600/40 rounded-tl-xl shadow-[-5px_-5px_15px_rgba(255,0,0,0.1)]">
         </div>
@@ -192,7 +180,6 @@
     <!-- Main Content -->
     <main class="flex-grow flex flex-col items-center justify-center w-full max-w-[1000px] mx-auto px-6 pb-12">
 
-        <!-- Clock -->
         <div class="text-center mb-4 md:mb-6">
             <h1 id="clock"
                 class="text-[3.5rem] md:text-[5rem] font-light leading-none tracking-tight text-gray-800 dark:text-white font-[200]">
@@ -208,7 +195,6 @@
             </div>
         </div>
 
-        <!-- Search -->
         <div class="w-full max-w-lg mb-8 md:mb-10 relative group px-4 md:px-0">
             <form action="https://www.google.com/search" method="GET" id="search-form">
                 <input type="text" name="q" id="search-input" placeholder="Search..." autocomplete="off"
@@ -218,14 +204,13 @@
             </form>
         </div>
 
-        <!-- Links Grid -->
         <div id="grid-container" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- JS Injected -->
         </div>
 
     </main>
 
-    <!-- Fixed Edit FAB -->
+    <!-- Edit FAB -->
     <button id="edit-fab"
         class="fixed bottom-6 right-6 size-10 flex items-center justify-center rounded-full glass-fab text-white shadow-lg shadow-black/10 hover:scale-110 transition-transform active:scale-95 z-50">
         <span id="fab-icon-edit" class="material-symbols-outlined text-[20px]">edit</span>
@@ -248,7 +233,7 @@
         </div>
     </div>
 
-    <!-- System Defense Protocol (Hidden Game) -->
+    <!-- Defense Protocol -->
     <div id="defense-protocol"
         class="fixed inset-0 z-50 bg-[#050505] hidden flex flex-col items-center justify-center font-mono">
 
@@ -368,7 +353,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="script.js"></script>
 </body>
 
